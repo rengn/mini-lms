@@ -1,4 +1,4 @@
-# schema https://supabase.com/schemas/config/v1.json
+#:schema https://supabase.com/schemas/config/v1.json
 # Local development configuration for `supabase start`; not loaded by the Next.js app.
 # Configure production auth URLs in the hosted Supabase dashboard.
 # Do not run `supabase config push` against a hosted project with these local settings.
