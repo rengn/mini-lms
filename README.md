@@ -1,159 +1,257 @@
 # Mini LMS
 
-A full-stack technical assessment for a lightweight learning management system,
-using Next.js App Router, TypeScript, Supabase Auth/PostgreSQL, and shadcn/ui
-components with Tailwind CSS.
+A lightweight learning management system where students book and manage
+consultations and administrators view every consultation in the system.
 
-## Current status
+**Stack:** Next.js 16 (App Router), TypeScript, Supabase Auth + PostgreSQL
+(`@supabase/supabase-js`, `@supabase/ssr`), Zod, shadcn/ui on Tailwind CSS.
 
-This repository is still in the foundation stage and is **not yet a complete
-assessment submission**.
+---
 
-Implemented:
+## 1. Setup
 
-- Supabase email/password sign-up, login, logout, and password reset.
-- Cookie-based Supabase SSR clients and Next.js proxy session refresh.
-- Server-side authentication check for the protected dashboard.
-- Safe internal redirects after email confirmation.
-- Local Supabase CLI configuration and development instructions.
+### Prerequisites
 
-Not implemented:
+- [nvm](https://github.com/nvm-sh/nvm) with **Node.js 22.15+ or 23.5+**
+- npm
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/), running
+- The Supabase CLI is installed as a dev dependency and run with `npx supabase`.
+  See the
+  [Supabase local development guide](https://supabase.com/docs/guides/local-development)
+  for background.
 
-- Consultation schema, migrations, or seed data.
-- Student consultation dashboard and booking form.
-- Consultation completion, rescheduling, and cancellation.
-- Admin role management and the read-only all-consultations view.
-- Consultation API routes, authorization policies, and RLS.
+### Steps
 
-The `/protected` page is currently an authenticated placeholder. Complete the
-missing features above before presenting the project as satisfying the brief.
-
-## Local setup
-
-Requires nvm, Node.js 22.13 or newer, npm, and Docker Desktop running. The
-committed `.nvmrc` selects Node 22; `.npmrc` enforces the minimum Node version.
+Run every step in order from the `mini-lms` directory.
 
 ```bash
-nvm use
+# 1. Select the project Node version (.nvmrc → 22). Older versions are rejected.
+nvm install && nvm use
+
+# 2. Install the exact locked dependencies.
 npm ci
+
+# 3. Create the local env file.
 cp .env.example .env.local
-docker network create -o 'com.docker.network.bridge.host_binding_ipv4=127.0.0.1' mini-lms-local
-npx supabase start --network-id mini-lms-local
+
+# 4. Start local Supabase. This also applies the migration automatically.
+npx supabase start
+
+# 5. Print the local API URL and keys.
+npx supabase status
 ```
 
-Create the Docker network once. Keep using `--network-id mini-lms-local` whenever
-you start the local stack so its published ports bind to localhost. If the
-network already exists, skip the `docker network create` command.
+6. Copy the **API URL** and the **publishable key** (shown as the anon key on
+   older CLI versions) from step 5 into `.env.local`:
 
-Run `npx supabase status` and copy the local API URL and publishable (or anon)
-key into `.env.local`:
+   ```dotenv
+   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key-from-status>
+   ```
 
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<local-publishable-key>
-```
+7. Start the app with `npm run dev`. Open **<http://localhost:3000>**, not
+   `127.0.0.1:3000`. Auth redirect URLs in `supabase/config.toml` are
+   allow-listed for `localhost` only.
 
-Never commit `.env.local`, secret keys, or signing secrets. Local Supabase uses
-development-default keys and its Studio/admin services do not require
-authentication. Use test data only; never expose the local stack publicly or use
-it for production.
+8. Create an admin user (see next section). Sign up normally to get a student
+   account.
 
-Run the app at `http://localhost:3000`:
-
-```bash
-npm run dev
-```
-
-The local Supabase Auth configuration in `supabase/config.toml` allows exact
-redirects to `/protected` and `/auth/update-password` on that origin. Keep the
-app hostname consistent (`localhost`, not `127.0.0.1`). Email confirmation is
-disabled locally; password reset messages are captured by Mailpit.
-
-| Service         | Local URL                |
+| Service         | URL                      |
 | --------------- | ------------------------ |
-| Next.js app     | <http://localhost:3000>  |
-| Supabase API    | <http://127.0.0.1:54321> |
+| App             | <http://localhost:3000>  |
 | Supabase Studio | <http://127.0.0.1:54323> |
-| Mailpit         | <http://127.0.0.1:54324> |
+| Mailpit (email) | <http://127.0.0.1:54324> |
 
-Restart Supabase without deleting its local data:
+### Special instructions
 
-```bash
-npx supabase stop
-npx supabase start --network-id mini-lms-local
+- **Admin accounts are created manually from the Studio.** There is no admin sign-up and no
+  seed data. To create one:
+  1. Open Studio → **Authentication → Users → Add user**. Enter an email and
+     password, tick **Auto confirm user**, then copy the new user's ID.
+  2. Open Studio → **Table Editor → `profiles`**. Find that ID and change
+     `role` from `student` to `admin`.
+  3. Sign in to the app with that account. You are taken to
+     `/admin/consultations`.
+
+  Every new user starts as a `student`, and only
+  privileged access (Studio or the service role) can change a role.
+
+- **Email confirmation is disabled locally**, so signing up logs you straight
+  in. Password-reset emails go to Mailpit.
+- **To rebuild the database from the migration**, run `npx supabase db reset`.
+  This deletes all local users and consultations, including your admin
+  account.
+
+---
+
+## 2. Implementation summary
+
+- **Architecture:**
+
+```text
+Browser (React client components)
+   │
+   ▼
+Route Handlers  app/api/consultations/**
+   withHttpErrorHandling → withAuth → withSameOrigin → withValidatedBody (Zod)
+   ▼
+Data access layer  lib/dal/**   (queries, Zod row validation, snake_case → camelCase)
+   ▼
+Supabase PostgreSQL   column grants → RLS policies → state-rule triggers
 ```
 
-## Assessment approach
+- **API:**
 
-The implementation is intended to address the assessment's core criteria:
+  | Endpoint                        | Purpose                                                                      |
+  | ------------------------------- | ---------------------------------------------------------------------------- |
+  | `GET /api/consultations`        | List consultations visible to the caller: own rows, or all rows for an admin |
+  | `POST /api/consultations`       | Book a consultation → `201`                                                  |
+  | `PATCH /api/consultations/[id]` | `{ action: "setStatus" \| "reschedule" \| "cancel", updatedAt, ... }`        |
 
-- **Secure access:** use the cookie-bound Supabase session for identity, enforce
-  authorization in API handlers, and back it with PostgreSQL RLS. Students may
-  only read or change their own consultations; admins may read all consultations.
-- **Roles:** keep roles in a database table controlled by trusted provisioning,
-  not in user-editable metadata. Check the role server-side before admin access.
-- **API-first design:** implement booking and consultation changes with Next.js
-  Route Handlers rather than Server Actions, with server-side input validation.
-- **Consistency and scalability:** store timestamps as `timestamptz`, index
-  common ownership/date queries, and keep persistence and business rules out of
-  presentation components.
-- **Reproducibility:** keep schema changes in ordered SQL migrations and document
-  how to apply them and generate matching TypeScript database types.
+- **Layout:**
+  - `app/`: routes
+  - `components/{admin,student,auth,forms,dialogs,routing,layout,ui}`
+  - `hooks/`
+  - `lib/{api,dal,clients,validation,supabase}`
+  - `supabase/{migrations,tests}`
+  - `tests/{api,ui}`
 
-These are design intentions, not claims that the currently missing LMS features,
-policies, or migrations already exist.
+- **Pages are server components.** Server-side role guards (`RoleOnly`,
+  `GuestOnly`) protect each page. A user who opens the other role's page is
+  redirected to their own home, and `/` redirects there too.
 
-## Proposed assumptions
+- **Errors use one JSON shape:** `{ error: { code, message, details? } }`.
+  Codes used: `400`, `401`, `403`, `404`, `409`, `422`, and `500`.
 
-Confirm these when implementing the consultation workflows:
+- **Security:**
+  1. Session check (`withAuth`, JSON `401`).
+  2. Same-origin check for mutations (`withSameOrigin`).
+  3. Zod validation (`withValidatedBody`).
+  4. Column grants.
+  5. RLS policies.
+  6. Database triggers.
 
-- Cancellation marks a consultation as cancelled instead of deleting its history.
-- Booking and rescheduling require a future date/time.
-- Cancelled consultations cannot be rescheduled or completed.
-- Times are stored as absolute `timestamptz` values and displayed in the user's
-  local timezone.
-- Tutor allocation, availability calendars, appointment duration, and
-  double-booking rules are outside scope unless added explicitly.
+---
 
-## Database and migrations
+## 3. Justifications and Assumptions
 
-**No application schema migration or seed data exists yet.** The current
-`supabase/config.toml` configures only the local development services and Auth
-redirect URLs. Production Supabase Auth URLs belong in the hosted project's
-dashboard; do not push the local URLs as production configuration.
+### Roles and RBAC
 
-When schema work begins, create migrations with:
+- **Roles:** `profiles.role` is a `student` or `admin` enum. Sign-up creates a
+  student profile transactionally; clients cannot change roles. Roles stay
+  out of editable `user_metadata`, which users can modify.
+- **RLS:** The browser can call Supabase's Data API directly, so database
+  policies enforce access even when requests bypass the app's API.
+- **Admin checks:** `private.is_admin()` uses `SECURITY DEFINER` to check roles
+  without recursive RLS evaluation. It reads the database each request, so
+  demotions take effect immediately. Its non-exposed schema and empty
+  `search_path` prevent object-name hijacking.
+- **Policy performance:** `(select private.is_admin())` and
+  `(select auth.uid())` run checks once per query, not per row. JWT role claims
+  avoid a lookup but can be stale after role changes.
+- **Admin access:** The brief asks for viewing only, so admins cannot create or
+  update consultations, including their own.
+- **Provisioning:** Admins are created manually; no `super_admin` or management
+  UI is needed. Directly seeding `auth.users` would depend on Supabase internals.
 
-```bash
-npx supabase migration new create_lms_schema
-npx supabase db reset
-npx supabase gen types typescript --local > lib/supabase/database.types.ts
-```
+### Security
 
-The migration files should define the profiles/roles and consultations tables,
-constraints, indexes, grants, and RLS policies. `db reset` recreates the local
-database from migrations and configured seed files; it discards manual local
-database changes.
+- **Write permissions:** `student_id` defaults to `auth.uid()` and cannot be
+  changed, preventing students from booking for others. Anonymous table access
+  is disabled, and deletes are disabled to preserve consultation history.
+- **CSRF:** Mutations require a matching `Origin`; together with `SameSite`
+  cookies this blocks cross-site browser requests without a separate token.
+- **Proxy:** It refreshes sessions and redirects, but is not the security
+  boundary. Pages, API routes, and RLS independently check access.
+- **No service-role key:** Queries run as the signed-in user so RLS cannot be
+  bypassed by privileged application access.
+- **Caching:** Responses are user-specific, so `private, no-store` prevents
+  shared caches from serving one user's data to another.
+- **Client creation:** ESLint restricts Supabase client factories to
+  `lib/supabase/**` so all clients use consistent cookie handling.
 
-## Production configuration
+### APIs
 
-Use a separate hosted Supabase project. Set its URL and publishable key as
-deployment environment variables. Configure the production Site URL and exact
-HTTPS auth redirect URLs in **Supabase → Authentication → URL Configuration**.
-The committed local CLI configuration is for `supabase start`, not production
-application configuration. Apply database migrations to the hosted project
-only after reviewing them.
+- **Initial load:** The student page reads the DAL directly for a faster first
+  load; changes use the API and refresh the list.
+- **Wrappers:** Four small composable wrappers avoid an extra framework
+  dependency; the outer error handler also catches authentication failures.
+- **Validation:** Zod rejects invalid requests and unexpected database rows.
+  One mapper keeps database `snake_case` and API `camelCase` consistent.
+- **PATCH actions:** `setStatus`, `reschedule`, and `cancel` constrain each
+  update; the database rejects changing time and status together.
+- **Optimistic concurrency:** Comparing `updatedAt` returns `409` for stale
+  updates instead of silently overwriting a newer change.
 
-## Development checks
+### Data and Migrations
 
-```bash
-npm run lint
-npm run typecheck
-npm run format:check
-npm run build
-```
+- **Migration:** One initial migration defines the schema for a reproducible
+  setup. With no production data to preserve, development changes were
+  consolidated into it; future changes should use new migrations.
+- **Names:** Stored per consultation because they are part of the booking and
+  may differ between bookings. Profiles hold only `id`, `role`, and timestamps.
+- **Constraints:** Enums restrict roles and statuses; `timestamptz` stores an
+  exact instant; indexes support ordered lists and prevent duplicate scheduled
+  bookings at the same instant.
+- **Cancellation:** Sets `status = 'cancelled'` to preserve history.
+  `ON DELETE RESTRICT` prevents deleting users whose consultations are retained.
+- **No seed data:** Testers sign up normally, exercising the actual profile
+  trigger instead of relying on fixtures.
 
-`npm run lint:fix` applies safe ESLint fixes; `npm run format` formats files and
-orders Tailwind classes. ESLint uses the Next.js presets, type-aware
-typescript-eslint strict/stylistic presets, project-specific import restrictions,
-and import sorting.
+### Consultation Rules
+
+**Statuses**
+
+- `scheduled` means incomplete; students can mark it complete.
+- Completion is final: reopening a past consultation would leave it scheduled
+  but still ineligible for rescheduling or cancellation.
+- `scheduled → completed | cancelled` keeps outcomes explicit and final.
+
+**Times**
+
+- **Display:** Times switch to the viewer's timezone after hydration; a
+  deterministic initial format avoids server/client hydration mismatches.
+- **Booking:** `timestamptz` stores an unambiguous instant. Times must be in the
+  future; the form improves feedback, while the API and database enforce it.
+- **Rescheduling and cancellation:** Only allowed before the start time.
+  Buttons may remain visible until the list refreshes, but late submissions are
+  rejected by the client and database.
+
+### Scalability
+
+- **Stateless app:** Cookie sessions and PostgreSQL storage let app instances
+  scale horizontally without shared in-memory state.
+- **Queries:** Indexes support list ordering, and `(select …)` reduces repeated
+  policy checks. Database rules also protect future clients and jobs.
+- **Roles:** New roles need enum, policy, and routing updates, not a rewrite.
+- **Pagination:** Lists are capped by Supabase's default 1,000-row limit.
+  Keyset pagination can use the existing `(scheduled_at, id)` index.
+
+---
+
+## 4. Schema
+
+`supabase/migrations/20261122105901_create_lms_schema.sql`
+
+| Table           | Columns                                                                                                                                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`      | `id` (PK, FK → `auth.users`), `role app_role default 'student'`, `created_at`, `updated_at`                                                                                                               |
+| `consultations` | `id`, `student_id` (FK → `profiles`, default `auth.uid()`), `first_name`, `last_name`, `reason`, `scheduled_at timestamptz`, `status consultation_status default 'scheduled'`, `created_at`, `updated_at` |
+
+---
+
+## 5. Testing
+
+> The automated tests were fully AI-generated, then reviewed and run locally.
+
+| Suite                    | Command            | Covers                                                                   |
+| ------------------------ | ------------------ | ------------------------------------------------------------------------ |
+| Database (pgTAP)         | `npm run db:test`  | Grants, RLS, triggers, and roles; needs local Supabase running           |
+| API (`node:test`)        | `npm run test:api` | Route handlers, wrappers, and validation, using a mocked Supabase client |
+| UI helpers (`node:test`) | `npm run test:ui`  | Client API helpers, form schemas, and time/DST conversion                |
+
+Static checks: `npm run lint`, `npm run typecheck`, `npm run format:check`,
+and `npm run build`.
+
+See [TESTING.md](./TESTING.md) for what each suite covers and a manual
+end-to-end checklist.
