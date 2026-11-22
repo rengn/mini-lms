@@ -1,5 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Suspense } from "react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 async function ErrorContent({
   searchParams,
@@ -10,7 +11,7 @@ async function ErrorContent({
 
   return (
     <>
-      {params?.error ? (
+      {params.error ? (
         <p className="text-sm text-muted-foreground">
           Code error: {params.error}
         </p>

@@ -1,7 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,9 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export function SignUpForm({
   className,
@@ -29,7 +30,6 @@ export function SignUpForm({
 
   const handleSignUp = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const supabase = createClient();
     setIsLoading(true);
     setError(null);
 
@@ -40,6 +40,7 @@ export function SignUpForm({
     }
 
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -64,7 +65,11 @@ export function SignUpForm({
           <CardDescription>Create a new account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignUp}>
+          <form
+            onSubmit={(event) => {
+              void handleSignUp(event);
+            }}
+          >
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -74,7 +79,7 @@ export function SignUpForm({
                   placeholder="m@example.com"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); }}
                 />
               </div>
               <div className="grid gap-2">
@@ -86,7 +91,7 @@ export function SignUpForm({
                   type="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); }}
                 />
               </div>
               <div className="grid gap-2">
@@ -98,7 +103,7 @@ export function SignUpForm({
                   type="password"
                   required
                   value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
+                  onChange={(e) => { setRepeatPassword(e.target.value); }}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
