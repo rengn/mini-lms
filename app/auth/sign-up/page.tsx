@@ -1,11 +1,17 @@
-import { SignUpForm } from "@/components/sign-up-form";
+import { Suspense } from "react";
+
+import { SignUpForm } from "@/components/forms/sign-up-form";
+import { AuthPage } from "@/components/layout/auth-page";
+import { GuestOnly } from "@/components/routing/guest-only";
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <SignUpForm />
-      </div>
-    </div>
+    <AuthPage>
+      <Suspense>
+        <GuestOnly>
+          <SignUpForm />
+        </GuestOnly>
+      </Suspense>
+    </AuthPage>
   );
 }

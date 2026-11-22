@@ -1,13 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,7 +18,8 @@ export function LogoutButton() {
       const supabase = createClient();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.push("/auth/login");
+      // Full navigation drops client router cache entries prefetched under the previous auth state.
+      window.location.replace("/auth/login");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -28,7 +28,7 @@ export function LogoutButton() {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2")}>
       <Button
         disabled={isLoading}
         onClick={() => {
@@ -37,7 +37,11 @@ export function LogoutButton() {
       >
         {isLoading ? "Logging out..." : "Logout"}
       </Button>
-      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p role="alert" className={cn("text-sm text-red-500")}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -6,8 +6,9 @@ import Link from "next/link";
 import { ThemeProvider } from "next-themes";
 import { Suspense } from "react";
 
-import { AuthButton } from "@/components/auth-button";
+import { AccountControls } from "@/components/auth/account-controls";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { cn } from "@/lib/utils";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -16,7 +17,7 @@ const defaultUrl = process.env.VERCEL_URL
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Mini LMS",
-  description: "Student consultation management",
+  description: "Consultation Management",
 };
 
 const geistSans = Geist({
@@ -32,32 +33,37 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
+      <body
+        className={cn(
+          geistSans.className,
+          "flex min-h-screen flex-col antialiased",
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen flex-col">
-            <header className="border-b">
-              <nav
-                aria-label="Main navigation"
-                className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-4 px-5"
-              >
-                <Link href="/" className="font-semibold">
-                  Mini LMS
-                </Link>
-                <Suspense fallback={<span>Loading account...</span>}>
-                  <AuthButton />
-                </Suspense>
-              </nav>
-            </header>
-            <div className="flex-1">{children}</div>
-            <footer className="flex justify-end border-t px-5 py-4">
-              <ThemeSwitcher />
-            </footer>
-          </div>
+          <header className={cn("border-b")}>
+            <nav
+              aria-label="Main navigation"
+              className={cn(
+                "mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-4 px-5",
+              )}
+            >
+              <Link href="/" className={cn("font-semibold")}>
+                Mini LMS
+              </Link>
+              <Suspense fallback={null}>
+                <AccountControls />
+              </Suspense>
+            </nav>
+          </header>
+          {children}
+          <footer className={cn("mt-auto flex justify-end border-t px-5 py-4")}>
+            <ThemeSwitcher />
+          </footer>
         </ThemeProvider>
       </body>
     </html>
