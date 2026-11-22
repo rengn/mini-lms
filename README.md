@@ -39,22 +39,18 @@ npx supabase start
 
 # 5. Print the local API URL and keys.
 npx supabase status
+
+# 6. Edit .env.local with the API URL and publishable key from step 5
+#    (older CLI versions call the publishable key the anon key):
+# NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key-from-status>
+
+# 7. Start the app. Open http://localhost:3000, not 127.0.0.1:3000;
+#    the local Auth redirect URLs are allow-listed for localhost only.
+npm run dev
+
+# 8. Create an admin user (see next section). Sign up normally to get a student account.
 ```
-
-6. Copy the **API URL** and the **publishable key** (shown as the anon key on
-   older CLI versions) from step 5 into `.env.local`:
-
-   ```dotenv
-   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key-from-status>
-   ```
-
-7. Start the app with `npm run dev`. Open **<http://localhost:3000>**, not
-   `127.0.0.1:3000`. Auth redirect URLs in `supabase/config.toml` are
-   allow-listed for `localhost` only.
-
-8. Create an admin user (see next section). Sign up normally to get a student
-   account.
 
 | Service         | URL                      |
 | --------------- | ------------------------ |
@@ -78,9 +74,6 @@ npx supabase status
 
 - **Email confirmation is disabled locally**, so signing up logs you straight
   in. Password-reset emails go to Mailpit.
-- **To rebuild the database from the migration**, run `npx supabase db reset`.
-  This deletes all local users and consultations, including your admin
-  account.
 
 ---
 
@@ -135,7 +128,7 @@ Supabase PostgreSQL   column grants → RLS policies → state-rule triggers
 
 ## 3. Justifications and Assumptions
 
-### Roles and RBAC
+### Role Based Access Control (RBAC)
 
 - **Roles:** `profiles.role` is a `student` or `admin` enum. Sign-up creates a
   student profile transactionally; clients cannot change roles. Roles stay
@@ -198,7 +191,7 @@ Supabase PostgreSQL   column grants → RLS policies → state-rule triggers
 - **No seed data:** Testers sign up normally, exercising the actual profile
   trigger instead of relying on fixtures.
 
-### Consultation Rules
+### Rules
 
 **Statuses**
 
