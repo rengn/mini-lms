@@ -158,8 +158,15 @@ Supabase PostgreSQL   column grants → RLS policies → state-rule triggers
   boundary. Pages, API routes, and RLS independently check access.
 - **No service-role key:** Queries run as the signed-in user so RLS cannot be
   bypassed by privileged application access.
+- **Passwords:** The local six-character minimum has no complexity rules and
+  is weak; production needs a stronger password policy.
+- **Production Auth:** Local email confirmation is disabled. A hosted
+  deployment needs reviewed HTTPS/redirect settings, SMTP and a tested
+  confirmation callback, stronger password policy, secure cookies, and
+  appropriate security headers.
 - **Caching:** Responses are user-specific, so `private, no-store` prevents
-  shared caches from serving one user's data to another.
+  shared caches from serving one user's data to another. The proxy also
+  forwards Supabase's no-cache headers when refreshing a session.
 - **Client creation:** ESLint restricts Supabase client factories to
   `lib/supabase/**` so all clients use consistent cookie handling.
 
@@ -174,8 +181,9 @@ Supabase PostgreSQL   column grants → RLS policies → state-rule triggers
 - **PATCH actions:** `setStatus`, `reschedule`, and `cancel` constrain each
   update; the database rejects changing time and status together.
 - **Optimistic concurrency:** Comparing `updatedAt` returns `409` for stale
-  updates instead of silently overwriting a newer change.
-
+  app-API updates instead of silently overwriting a newer change. Direct
+  Supabase Data API writes still follow RLS and database rules, but do not use
+  this version check.
 ### Data and Migrations
 
 - **Migration:** One initial migration defines the schema for a reproducible
