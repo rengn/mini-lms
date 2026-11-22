@@ -1,110 +1,159 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# Mini LMS
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+A full-stack technical assessment for a lightweight learning management system,
+using Next.js App Router, TypeScript, Supabase Auth/PostgreSQL, and shadcn/ui
+components with Tailwind CSS.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## Current status
 
-## Features
+This repository is still in the foundation stage and is **not yet a complete
+assessment submission**.
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+Implemented:
 
-## Demo
+- Supabase email/password sign-up, login, logout, and password reset.
+- Cookie-based Supabase SSR clients and Next.js proxy session refresh.
+- Server-side authentication check for the protected dashboard.
+- Safe internal redirects after email confirmation.
+- Local Supabase CLI configuration and development instructions.
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+Not implemented:
 
-## Deploy to Vercel
+- Consultation schema, migrations, or seed data.
+- Student consultation dashboard and booking form.
+- Consultation completion, rescheduling, and cancellation.
+- Admin role management and the read-only all-consultations view.
+- Consultation API routes, authorization policies, and RLS.
 
-Vercel deployment will guide you through creating a Supabase account and project.
+The `/protected` page is currently an authenticated placeholder. Complete the
+missing features above before presenting the project as satisfying the brief.
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## Local setup
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+Requires nvm, Node.js 22.13 or newer, npm, and Docker Desktop running. The
+committed `.nvmrc` selects Node 22; `.npmrc` enforces the minimum Node version.
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
-
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
-
-## Clone and run locally
-
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Create a Next.js app using the Supabase Starter template npx command
-
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
-
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
+```bash
+nvm use
+npm ci
+cp .env.example .env.local
+docker network create -o 'com.docker.network.bridge.host_binding_ipv4=127.0.0.1' mini-lms-local
+npx supabase start --network-id mini-lms-local
 ```
 
-> [!NOTE]
-> This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-> Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-> See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
+Create the Docker network once. Keep using `--network-id mini-lms-local` whenever
+you start the local stack so its published ports bind to localhost. If the
+network already exists, skip the `docker network create` command.
 
-Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+Run `npx supabase status` and copy the local API URL and publishable (or anon)
+key into `.env.local`:
 
-5. You can now run the Next.js local development server:
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<local-publishable-key>
+```
 
-   ```bash
-   npm run dev
-   ```
+Never commit `.env.local`, secret keys, or signing secrets. Local Supabase uses
+development-default keys and its Studio/admin services do not require
+authentication. Use test data only; never expose the local stack publicly or use
+it for production.
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+Run the app at `http://localhost:3000`:
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+```bash
+npm run dev
+```
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+The local Supabase Auth configuration in `supabase/config.toml` allows exact
+redirects to `/protected` and `/auth/update-password` on that origin. Keep the
+app hostname consistent (`localhost`, not `127.0.0.1`). Email confirmation is
+disabled locally; password reset messages are captured by Mailpit.
 
-## Feedback and issues
+| Service         | Local URL                |
+| --------------- | ------------------------ |
+| Next.js app     | <http://localhost:3000>  |
+| Supabase API    | <http://127.0.0.1:54321> |
+| Supabase Studio | <http://127.0.0.1:54323> |
+| Mailpit         | <http://127.0.0.1:54324> |
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+Restart Supabase without deleting its local data:
 
-## More Supabase examples
+```bash
+npx supabase stop
+npx supabase start --network-id mini-lms-local
+```
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+## Assessment approach
+
+The implementation is intended to address the assessment's core criteria:
+
+- **Secure access:** use the cookie-bound Supabase session for identity, enforce
+  authorization in API handlers, and back it with PostgreSQL RLS. Students may
+  only read or change their own consultations; admins may read all consultations.
+- **Roles:** keep roles in a database table controlled by trusted provisioning,
+  not in user-editable metadata. Check the role server-side before admin access.
+- **API-first design:** implement booking and consultation changes with Next.js
+  Route Handlers rather than Server Actions, with server-side input validation.
+- **Consistency and scalability:** store timestamps as `timestamptz`, index
+  common ownership/date queries, and keep persistence and business rules out of
+  presentation components.
+- **Reproducibility:** keep schema changes in ordered SQL migrations and document
+  how to apply them and generate matching TypeScript database types.
+
+These are design intentions, not claims that the currently missing LMS features,
+policies, or migrations already exist.
+
+## Proposed assumptions
+
+Confirm these when implementing the consultation workflows:
+
+- Cancellation marks a consultation as cancelled instead of deleting its history.
+- Booking and rescheduling require a future date/time.
+- Cancelled consultations cannot be rescheduled or completed.
+- Times are stored as absolute `timestamptz` values and displayed in the user's
+  local timezone.
+- Tutor allocation, availability calendars, appointment duration, and
+  double-booking rules are outside scope unless added explicitly.
+
+## Database and migrations
+
+**No application schema migration or seed data exists yet.** The current
+`supabase/config.toml` configures only the local development services and Auth
+redirect URLs. Production Supabase Auth URLs belong in the hosted project's
+dashboard; do not push the local URLs as production configuration.
+
+When schema work begins, create migrations with:
+
+```bash
+npx supabase migration new create_lms_schema
+npx supabase db reset
+npx supabase gen types typescript --local > lib/supabase/database.types.ts
+```
+
+The migration files should define the profiles/roles and consultations tables,
+constraints, indexes, grants, and RLS policies. `db reset` recreates the local
+database from migrations and configured seed files; it discards manual local
+database changes.
+
+## Production configuration
+
+Use a separate hosted Supabase project. Set its URL and publishable key as
+deployment environment variables. Configure the production Site URL and exact
+HTTPS auth redirect URLs in **Supabase → Authentication → URL Configuration**.
+The committed local CLI configuration is for `supabase start`, not production
+application configuration. Apply database migrations to the hosted project
+only after reviewing them.
+
+## Development checks
+
+```bash
+npm run lint
+npm run typecheck
+npm run format:check
+npm run build
+```
+
+`npm run lint:fix` applies safe ESLint fixes; `npm run format` formats files and
+orders Tailwind classes. ESLint uses the Next.js presets, type-aware
+typescript-eslint strict/stylistic presets, project-specific import restrictions,
+and import sorting.
